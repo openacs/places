@@ -1,0 +1,11 @@
+analyze table places compute statistics;
+analyze table subplace_rels compute statistics;
+analyze table location_rels compute statistics;
+analyze table place_element_index compute statistics;
+analyze table pl_countries compute statistics;
+analyze table pl_regions compute statistics;
+analyze table pl_us_states compute statistics;
+analyze table pl_us_counties compute statistics;
+analyze table pl_municipalities compute statistics;
+analyze table pl_postal_codes compute statistics;
+analyze table pl_addresses compute statistics;

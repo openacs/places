@@ -1,0 +1,272 @@
+<html> 
+<head>
+<title>Places Requirements</title>
+</head>
+
+<body bgcolor=white>
+
+<h2>Places Requirements</h2>
+
+by John Mileham and Oumi Mehrotra
+
+<hr>
+
+<h3>I. Introduction</h3>
+
+<p>
+This document lays out the requirements for an ACS service for uniquely
+identifying geographic locations.
+</p>
+
+<h3>II. Vision Statement</h3><p>
+
+<p>
+There are many situations where an address or location needs to mean more to
+a web service than a few text fields and a ZIP code.  Providing a standard
+mechanism for storing this information in a readily accessible format allows
+for applications such as geo-centric bboards, dealer locators, and regional
+usage statistics to be developed quickly and easily.  The
+places service also meets the need to internationalize the representation of
+geographic locations by supporting but not requiring arbitrary country-specific
+levels of organization, such as ZIP codes and states in the US.
+</p>
+
+<h3>III. System/Application Overview</h3>
+
+<p>
+The places service provides a storage mechanism for physical
+places, in addition to a standard data set of countries and US states.  The
+places system also provides an API for adding places and place types, assigning
+places to ACS objects, and answering essential questions about place-object
+associations (i.e. determining the location of any ACS object in the database
+that has been assigned one).
+</p>
+
+<h3>IV. Use-cases and User-scenarios</h3>
+
+<p>
+A typical use for the places service would be the <a href="/doc/address-book/">address book</a> application,
+which makes use of places to store physical addresses.  In a geocentric bboard, forums could be created
+and associated with any place, be it a country, state, or any implementation-specific place-type.  ZIP code
+searches could be performed easily as every place in the database may carry latitude/longitude values.
+As an added benefit of latitude/longitude support of all places, radius searches could be performed with
+less specific data (such as a state or country).  There are internationalization benefits as well.  This 
+system allows for radius searches to be carried out
+in countries that may not have a postal code system (or in a country with an entirely seperate postal code
+system), though the latitude/longitude data and new place types for the applicable places would, no doubt,
+need to be added by the implementor of such a system through the API provided by the places service.
+
+</p>
+
+<h3>Competitive Analysis</h3>
+
+<p>
+In ACS 3.x, there was no ACS-global representation of a physical location or an address.  The places
+service allows many applications to access and edit this information in a standard way, sharing and reusing
+geographic data.  Modeling the concept that places exist within other places allows
+us to verify integrity of address information before inserting it into the database (e.g. "New Jersey is not in
+France.  Please go back and correct this error.").  This system adds concrete semantic value to data that
+would traditionally be stored in an application specific table containing hard-references to ACS geo
+tables.  The creation of a storage system where ACS "understands" the data it is keeping track of will allow
+us to apply the data in countless ways in the future.
+</p>
+
+<h3>V. Related Links</h3>
+
+<ul>
+  <li> <a href=index>Coversheet</a>
+  <li> <a href=design>Design document</a>
+  <li> <a href=/doc/address-book/>Address Book Documentation</a> - <i>A
+typical application employing the places service</i>
+</ul>
+
+<h3>VI.A Requirements: Data Model</h3>
+
+<h4>10.0 Place Identification</h4>
+
+A place must have the following attributes:
+<ul>
+<h5>10.01 <code>place_id</code> (primary key) that is guaranteed to be unique
+to the local ACS site.</h5>
+
+<h5>10.07 Place Type</h5>
+
+<h5>10.10 Type-Specific attributes</h5>
+Each place type may have additional attributes associated with it.  For
+example, the <code>state</code> place-type may define a <code>usps_abbrev</code>
+attribute to store the two-letter US Postal Service state name abbreviation.  Many
+place types may carry a <code>name</code> attribute as well.
+
+<h5>10.20 Latitude/Longitude</h5>
+All places may carry values for latitude and longitude, though these values
+are not required.
+
+</ul>
+<h4>12.0 Aggregate Places</h4>
+
+Places may be related to each other to represent containment. That
+is, one place may be entirely contained by any other place. The
+integrity of this relationship must be automatically maintained through
+all data changes.
+
+<ul>
+
+<h5>12.10 Transitivity</h5>
+
+The Location Relationship represents a transitive relationship. That is,
+if a place "Boston" belongs to place "MA", and place "MA" automatically
+belongs to place "US", "Boston" must belong to place "US".
+
+<h5>12.20 Unique direct parent</h5>
+
+Each place may have at most one parent place. This
+requirement prevents one geographically distinct place from belonging
+to two places in different areas. For example, the 02139 ZIP code can
+not belong to both Cambridge and Pasadena. Note that the 02139 zip code
+automatically will belong to all parent places of Cambridge through the
+transitivity requirement, but that this does not violate the general
+idea of one geographic place existing in more than one place.
+</ul>
+
+<h4>13.0 Integration with ACS Object Model</h4>
+
+The Places package must integrate with the ACS Object Model.
+
+<ul>
+<h5>13.10 Place-Object Association</h5>
+
+Each ACS Object may be associated with 0 or more Places to represent
+application-specific associations (such as addresses being associated
+with an individual contact in address-book). We map multiple
+places to individual ACS objects for two reasons.  First, physical
+locations often have multiple addresses. For example, ArsDigita, though
+a single entity, and
+possibly represented as a single object in ACS, may have several
+addresses for different purposes (e.g. a P.O. box and a street address).
+Second, ACS objects are not guaranteed to be geographically static
+or distinct.  For instance, an address-book contact is an ACS object,
+though it may contain several different addresses (like a work address,
+a home address, etc).
+
+<h5>13.20 Transitivity with respect to place aggregation</h5>
+
+An object that is associated with a place must also be indirectly
+associated with all of that place's ancestors.  This would allow us to
+say that a geocentric bboard post about Boston would be indirectly
+associated with Massachusetts and the United States.
+
+</ul>
+
+<h4>15.0 Predefined Place Types</h4>
+
+The system must define a few standard place types, including country,
+state/province, and address.  This does not mean that runtime place type definitions
+will be restricted.
+<ul>
+<h5>11.10 The "country" place type</h5>
+Countries will have unique names.
+<h5>11.20 The "state/province" place type</h5>
+States will have names unique within their countries.
+<h5>11.30 The "address" place type</h5>
+The address place type will provide storage for information not modeled
+in other place types, as it would be impossible (and not very desirable)
+to model or maintain data integrity for address numbers as they relate to
+street names the world over, for example.
+</ul>
+
+<h3>VI.B Requirements: Data</h3>
+
+<h4>20.0 A data set of all countries and US states</h4>
+The service will contain all countries, US states and Canadian provinces to
+allow for creation of basic UI elements such as state dropdown boxes for
+dependant applications.  In future, this may also include a large number of
+cities and their lattitudes and longitudes to enable geographic searching
+etc.
+
+
+<h3>VI.B Requirements: API</h3>
+
+<h4>30.0 Answer the question "What places is object X directly associated with?"</h4>
+
+<h4>31.0 Answer the question "What places is object X indirectly associated with?"</h4>
+
+<h4>35.0 Answer the question "What objects are associated with place X?"</h4>
+
+<h4>40.0 Creation of place types</h4>
+An API must exist to allow for creation of new place types (e.g. continents)
+not specified by default in the distribution.
+
+<h4>50.0 Creation of places</h4>
+Application programmers must be able to add places to the places system as we
+can not guarantee knowledge of all cities in the world, etc.
+
+<h4>60.0 Assign a place to an object (via location relationship)</h4>
+
+<h4>65.0 Consistency check</h4>
+Places must provide the ability to check place containment up the hierarchy before
+insert (e.g. rejecting creation of an address that attempts to place itself in New Jersey, France).
+
+<h4>70.0 Provide ACS 3.x style API for place interaction</h4>
+Though there are many benefits of the hierarchical representation of place information,
+views and place-creation API should be provided to allow application programmers to
+make use of the places service without worrying about its internal structure.
+
+<h4>80.0 Efficiency</h4>
+Since applications may ask the questions outlined in <code>30.0</code>-<code>35.0</code>
+frequently, and there may be heavy demand for place attributes (such as latitude/longitude
+in the case of radius searches), the data model must support the efficient storage
+and retrieval of place attributes and containment.
+
+<h3>VII. Revision History</h3>
+
+<table cellpadding=2 cellspacing=2 width=90% bgcolor=#efefef>
+<tr bgcolor=#e0e0e0>
+    <th width=10%>Document Revision #</th>
+    <th width=50%>Action Taken, Notes</th>
+    <th>When?</th>
+    <th>By Whom?</th>
+</tr>
+
+<tr>
+   <td>0.1</td>
+   <td>Creation</td>
+   <td>11/08/2000</td>
+   <td>John Mileham</td>
+</tr>
+<tr>
+   <td>0.2</td>
+   <td>Clarified</td>
+   <td>11/22/2000</td>
+   <td>John Mileham</td>
+</tr>
+<tr>
+   <td>0.3</td>
+   <td>Rewritten</td>
+   <td>11/27/2000</td>
+   <td>John Mileham (w/ significant input from Oumi Mehrotra)</td>
+</tr>
+<tr>
+   <td>0.4</td>
+   <td>Revised</td>
+   <td>11/29/2000</td>
+   <td>John Mileham and Oumi Mehrotra</td>
+</tr>
+<tr>
+   <td>0.5</td>
+   <td>Revised</td>
+   <td>12/05/2000</td>
+   <td>John Mileham w/input from Michael Bryzek</td>
+</tr>
+
+</table>
+
+<p>
+
+<hr>
+<address><a href="mailto:jmileham@arsdigita.com">jmileham@arsdigita.com</a></address>
+
+Last modified: $Date$
+
+
+</body>
+</html>
